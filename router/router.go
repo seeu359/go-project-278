@@ -4,11 +4,15 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"github.com/seeu359/go-project-278/handlers"
+	"github.com/seeu359/go-project-278/links"
 )
 
-func New() *gin.Engine {
+func New(q *links.Queries) *gin.Engine {
 	r := gin.Default()
-	r.GET("ping", handlers.Ping)
+	h := handlers.New(q)
 
+	r.GET("ping", handlers.Ping)
+	r.POST("/api/links", h.CreateLink)
+	r.GET("/api/links/:id", h.GetLinkById)
 	return r
 }
