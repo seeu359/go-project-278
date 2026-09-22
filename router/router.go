@@ -13,6 +13,9 @@ func New(q *links.Queries) *gin.Engine {
 
 	r.GET("ping", handlers.Ping)
 	r.POST("/api/links", h.CreateLink)
+	r.GET("/api/links", h.GetLinks)
 	r.GET("/api/links/:id", h.GetLinkById)
+	r.PUT("/api/links/:id", h.UpdateLink)
+	r.DELETE("/api/links/:id", h.DeleteLink)
 	return r
 }
