@@ -22,3 +22,14 @@ func CreateLinks(t *testing.T, q *links.Queries) error {
 	}
 	return nil
 }
+
+func CreateLink(t *testing.T, q *links.Queries) (int64, error) {
+	t.Helper()
+	ctx := context.Background()
+	link := links.CreateLinkParams{Url: "https://ya.ru", ShortName: "short"}
+	id, err := q.CreateLink(ctx, links.CreateLinkParams{Url: link.Url, ShortName: link.ShortName})
+	if err != nil {
+		return 0, err
+	}
+	return id, nil
+}

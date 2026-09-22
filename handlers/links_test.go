@@ -2,6 +2,7 @@ package handlers_test
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -43,20 +44,23 @@ func TestHandler_GetLink(t *testing.T) {
 	pool := testutil.NewPostgres(t)
 	q := links.New(pool)
 	handler := handlers.New(q)
-	require.NoError(t, factory.CreateLinks(t, q))
+
+	id, err := factory.CreateLink(t, q)
+	fmt.Println("id", id)
+	require.NoError(t, err)
 
 	router := gin.Default()
-	router.GET("/api/links/1", handler.GetLinkById)
+	router.GET("/api/links/:id", handler.GetLinkById)
 
-	req := httptest.NewRequest(http.MethodGet, "/api/links/1", nil)
+	req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/api/links/%d", id), nil)
 	w := httptest.NewRecorder()
 
 	router.ServeHTTP(w, req)
 
 	var link handlers.GetLinkResponse
-	err := json.Unmarshal(w.Body.Bytes(), &link)
+	err = json.Unmarshal(w.Body.Bytes(), &link)
 
 	require.NoError(t, err)
-	assert.Equal(t, link.ShortName, "short")
-	assert.Equal(t, link.URL, "https://ya.ru")
+	assert.Equal(t, "short", link.ShortName)
+	assert.Equal(t, "https://ya.ru", link.URL)
 }
