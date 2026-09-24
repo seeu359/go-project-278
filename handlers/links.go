@@ -70,7 +70,12 @@ func (h *Handler) GetLinkById(c *gin.Context) {
 	}
 	dbLink, err := h.getDbLink(id)
 	if err != nil {
+		if errors.Is(err, LinkNotFoundError) {
+			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+			return
+		}
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
 	}
 	shortURL, err := links.GetShortURL(dbLink.ShortName)
 	if err != nil {
@@ -112,6 +117,7 @@ func (h *Handler) UpdateLink(c *gin.Context) {
 	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "incorrect id passed"})
+		return
 	}
 
 	var req UpdateLinkRequest

@@ -12,20 +12,21 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/seeu359/go-project-278/handlers"
-	"github.com/seeu359/go-project-278/links"
 	"github.com/seeu359/go-project-278/testutil"
 	"github.com/seeu359/go-project-278/testutil/factory"
 )
 
+type RespError struct {
+	Error string `json:"error"`
+}
+
 func TestHandler_GetLinks(t *testing.T) {
-	gin.SetMode(gin.TestMode)
-	pool := testutil.NewPostgres(t)
-	q := links.New(pool)
-	handler := handlers.New(q)
+	q := testutil.Tx(t, TestPool)
+
 	require.NoError(t, factory.CreateLinks(t, q))
 
 	router := gin.Default()
-	router.GET("/api/links", handler.GetLinks)
+	router.GET("/api/links", handlers.New(q).GetLinks)
 
 	req := httptest.NewRequest(http.MethodGet, "/api/links", nil)
 	w := httptest.NewRecorder()
@@ -40,17 +41,13 @@ func TestHandler_GetLinks(t *testing.T) {
 }
 
 func TestHandler_GetLink(t *testing.T) {
-	gin.SetMode(gin.TestMode)
-	pool := testutil.NewPostgres(t)
-	q := links.New(pool)
-	handler := handlers.New(q)
+	q := testutil.Tx(t, TestPool)
 
 	id, err := factory.CreateLink(t, q)
-	fmt.Println("id", id)
 	require.NoError(t, err)
 
 	router := gin.Default()
-	router.GET("/api/links/:id", handler.GetLinkById)
+	router.GET("/api/links/:id", handlers.New(q).GetLinkById)
 
 	req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/api/links/%d", id), nil)
 	w := httptest.NewRecorder()
@@ -63,4 +60,23 @@ func TestHandler_GetLink(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "short", link.ShortName)
 	assert.Equal(t, "https://ya.ru", link.URL)
+}
+
+func TestHandler_GetLinkErrorNotFound(t *testing.T) {
+	q := testutil.Tx(t, TestPool)
+	id, err := factory.CreateLink(t, q)
+	require.NoError(t, err)
+
+	router := gin.Default()
+	router.GET("/api/links/:id", handlers.New(q).GetLinkById)
+
+	req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/api/links/%d", id+100), nil)
+	w := httptest.NewRecorder()
+
+	router.ServeHTTP(w, req)
+
+	var respErr RespError
+	err = json.Unmarshal(w.Body.Bytes(), &respErr)
+	assert.Equal(t, "Link Not Found", respErr.Error)
+	assert.Equal(t, http.StatusNotFound, w.Code)
 }
