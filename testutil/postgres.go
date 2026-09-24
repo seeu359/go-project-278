@@ -63,6 +63,7 @@ func Tx(t *testing.T, pool *pgxpool.Pool) *links.Queries {
 
 	return links.New(tx)
 }
+
 func runMigrations(dsn string) error {
 	db, err := sql.Open("pgx", dsn)
 	if err != nil {

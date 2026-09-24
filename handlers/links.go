@@ -3,10 +3,12 @@ package handlers
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
 	"strconv"
 
 	"github.com/seeu359/go-project-278/links"
+	"github.com/seeu359/go-project-278/utils"
 
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5"
@@ -48,6 +50,24 @@ func (h *Handler) CreateLink(c *gin.Context) {
 		return
 	}
 	c.Status(http.StatusCreated)
+}
+
+func getPaginated(pagination string, dbLinks []links.Link) ([]links.Link, error) {
+	p, err := utils.FormatedPagination(pagination)
+	fmt.Println("pagination", p)
+	if err != nil {
+		return []links.Link{}, err
+
+	}
+	if p.Start >= len(dbLinks) {
+		return []links.Link{}, nil
+	}
+	if p.End > len(dbLinks) {
+		p.End = len(dbLinks)
+	} else {
+		p.End += 1
+	}
+	return dbLinks[p.Start:p.End], nil
 }
 
 func (h *Handler) getDbLink(id int64) (links.Link, error) {
@@ -98,6 +118,21 @@ func (h *Handler) GetLinks(c *gin.Context) {
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
+	}
+
+	pagination := c.Query("range")
+	fmt.Println("pagination", pagination)
+	if pagination != "" {
+		dbLinks, err = getPaginated(pagination, dbLinks)
+		if err != nil {
+			c.JSON(
+				http.StatusBadRequest,
+				gin.H{
+					"error": utils.InvalidPaginationParamsError.Error()
+				}
+			)
+			return
+		}
 	}
 	var respLinks []GetLinkResponse
 	for _, l := range dbLinks {
