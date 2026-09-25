@@ -19,3 +19,14 @@ WHERE id = $3;
 DELETE FROM links
 WHERE id = $1;
 
+-- name: GetVisits :many
+SELECT * FROM visits;
+
+-- name: AddVisit :one
+INSERT INTO visits (
+  link_id,
+  ip,
+  user_agent,
+  status
+) VALUES ($1, $2, $3, $4)
+RETURNING id;

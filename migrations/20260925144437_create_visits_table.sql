@@ -1,9 +1,4 @@
-CREATE TABLE links (
-  id   BIGSERIAL PRIMARY KEY,
-  url TEXT  NOT NULL,
-  short_name TEXT NOT NULL
-);
-
+-- +goose Up
 CREATE TABLE visits (
   id   BIGSERIAL PRIMARY KEY,
   link_id INT NOT NULL,
@@ -16,3 +11,6 @@ CREATE TABLE visits (
   FOREIGN KEY (link_id)
   REFERENCES links(id)
 );
+
+-- +goose Down
+DROP TABLE visits;

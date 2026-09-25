@@ -9,7 +9,37 @@ import (
 	"context"
 
 	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/jackc/pgx/v5/pgtype"
 )
+
+const addVisit = `-- name: AddVisit :one
+INSERT INTO visits (
+  link_id,
+  ip,
+  user_agent,
+  status
+) VALUES ($1, $2, $3, $4)
+RETURNING id
+`
+
+type AddVisitParams struct {
+	LinkID    int32
+	Ip        string
+	UserAgent pgtype.Text
+	Status    pgtype.Int4
+}
+
+func (q *Queries) AddVisit(ctx context.Context, arg AddVisitParams) (int64, error) {
+	row := q.db.QueryRow(ctx, addVisit,
+		arg.LinkID,
+		arg.Ip,
+		arg.UserAgent,
+		arg.Status,
+	)
+	var id int64
+	err := row.Scan(&id)
+	return id, err
+}
 
 const createLink = `-- name: CreateLink :one
 INSERT INTO links (url, short_name)
@@ -63,6 +93,37 @@ func (q *Queries) GetLinks(ctx context.Context) ([]Link, error) {
 	for rows.Next() {
 		var i Link
 		if err := rows.Scan(&i.ID, &i.Url, &i.ShortName); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getVisits = `-- name: GetVisits :many
+SELECT id, link_id, created_at, ip, user_agent, status FROM visits
+`
+
+func (q *Queries) GetVisits(ctx context.Context) ([]Visit, error) {
+	rows, err := q.db.Query(ctx, getVisits)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Visit
+	for rows.Next() {
+		var i Visit
+		if err := rows.Scan(
+			&i.ID,
+			&i.LinkID,
+			&i.CreatedAt,
+			&i.Ip,
+			&i.UserAgent,
+			&i.Status,
+		); err != nil {
 			return nil, err
 		}
 		items = append(items, i)

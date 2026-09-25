@@ -128,8 +128,8 @@ func (h *Handler) GetLinks(c *gin.Context) {
 			c.JSON(
 				http.StatusBadRequest,
 				gin.H{
-					"error": utils.InvalidPaginationParamsError.Error()
-				}
+					"error": utils.InvalidPaginationParamsError.Error(),
+				},
 			)
 			return
 		}

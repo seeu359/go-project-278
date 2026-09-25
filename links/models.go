@@ -4,8 +4,21 @@
 
 package links
 
+import (
+	"github.com/jackc/pgx/v5/pgtype"
+)
+
 type Link struct {
 	ID        int64
 	Url       string
 	ShortName string
+}
+
+type Visit struct {
+	ID        int64
+	LinkID    int32
+	CreatedAt pgtype.Timestamptz
+	Ip        string
+	UserAgent pgtype.Text
+	Status    pgtype.Int4
 }

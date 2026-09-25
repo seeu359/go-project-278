@@ -11,7 +11,7 @@ type Pagination struct {
 	End   int
 }
 
-var InvalidPaginationParamsError = errors.New("Invalod pagination params")
+var InvalidPaginationParamsError = errors.New("Invalid pagination params")
 
 func FormatedPagination(pagination string) (*Pagination, error) {
 	str := strings.Split(pagination[1:len(pagination)-1], ",")
@@ -25,7 +25,7 @@ func FormatedPagination(pagination string) (*Pagination, error) {
 	}
 
 	if res[0] < 0 || res[1] < 0 {
-		return &Pagination{}, InvalidPaginationParams
+		return &Pagination{}, InvalidPaginationParamsError
 	}
 	return &Pagination{Start: res[0], End: res[1]}, nil
 }
