@@ -4,6 +4,9 @@ SELECT * FROM links;
 -- name: GetLink :one
 SELECT * FROM links WHERE id = $1;
 
+-- name: GetLinkByCode :one
+SELECT * FROM links WHERE short_name = $1;
+
 -- name: CreateLink :one
 INSERT INTO links (url, short_name)
 VALUES ($1, $2)

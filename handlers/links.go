@@ -15,8 +15,8 @@ import (
 )
 
 type CreateLinkRequest struct {
-	URL       string `json:"original_url"`
-	ShortName string `json:"short_name"`
+	URL       string `json:"original_url" binding:"required,url"`
+	ShortName string `json:"short_name" binding:"omitempty,min=3,max=32"`
 }
 
 type UpdateLinkRequest struct {
@@ -31,19 +31,40 @@ type GetLinkResponse struct {
 }
 
 var LinkNotFoundError = errors.New("Link Not Found")
+var ShortNameAlreadyInUseError = errors.New("short name already in use")
 
 func (h *Handler) CreateLink(c *gin.Context) {
 	var req CreateLinkRequest
 
 	if err := c.ShouldBindJSON(&req); err != nil {
+		fmt.Println(err.Error())
 		c.JSON(http.StatusBadRequest, gin.H{
 			"error": err.Error(),
 		})
 		return
 	}
+	if req.ShortName == "" {
+		shortName, err := links.RandomShortName(10)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+		req.ShortName = shortName
+	}
+
 	link := links.CreateLinkParams{Url: req.URL, ShortName: req.ShortName}
 	_, err := h.q.CreateLink(c.Request.Context(), link)
 	if err != nil {
+		if utils.IsUniqueViolationError(err) {
+			c.JSON(http.StatusUnprocessableEntity,
+				gin.H{
+					"errors": gin.H{
+						"short_name": ShortNameAlreadyInUseError.Error(),
+					},
+				},
+			)
+			return
+		}
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": err.Error(),
 		})
@@ -52,22 +73,22 @@ func (h *Handler) CreateLink(c *gin.Context) {
 	c.Status(http.StatusCreated)
 }
 
-func getPaginated(pagination string, dbLinks []links.Link) ([]links.Link, error) {
+func getPaginated[T any](pagination string, entities []T) ([]T, error) {
 	p, err := utils.FormatedPagination(pagination)
 	fmt.Println("pagination", p)
 	if err != nil {
-		return []links.Link{}, err
+		return nil, err
 
 	}
-	if p.Start >= len(dbLinks) {
-		return []links.Link{}, nil
+	if p.Start >= len(entities) {
+		return nil, nil
 	}
-	if p.End > len(dbLinks) {
-		p.End = len(dbLinks)
+	if p.End > len(entities) {
+		p.End = len(entities)
 	} else {
 		p.End += 1
 	}
-	return dbLinks[p.Start:p.End], nil
+	return entities[p.Start:p.End], nil
 }
 
 func (h *Handler) getDbLink(id int64) (links.Link, error) {
@@ -121,7 +142,6 @@ func (h *Handler) GetLinks(c *gin.Context) {
 	}
 
 	pagination := c.Query("range")
-	fmt.Println("pagination", pagination)
 	if pagination != "" {
 		dbLinks, err = getPaginated(pagination, dbLinks)
 		if err != nil {
@@ -134,7 +154,7 @@ func (h *Handler) GetLinks(c *gin.Context) {
 			return
 		}
 	}
-	var respLinks []GetLinkResponse
+	respLinks := make([]GetLinkResponse, 0, len(dbLinks))
 	for _, l := range dbLinks {
 		shortURL, err := links.GetShortURL(l.ShortName)
 		if err != nil {
@@ -171,6 +191,16 @@ func (h *Handler) UpdateLink(c *gin.Context) {
 		},
 	)
 	if err != nil {
+		if utils.IsUniqueViolationError(err) {
+			c.JSON(http.StatusUnprocessableEntity,
+				gin.H{
+					"errors": gin.H{
+						"short_name": ShortNameAlreadyInUseError.Error(),
+					},
+				},
+			)
+			return
+		}
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": err.Error(),
 		})

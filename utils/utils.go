@@ -4,6 +4,8 @@ import (
 	"errors"
 	"strconv"
 	"strings"
+
+	"github.com/jackc/pgx/v5/pgconn"
 )
 
 type Pagination struct {
@@ -11,6 +13,7 @@ type Pagination struct {
 	End   int
 }
 
+var UniqueViolationErrorCode = "23505"
 var InvalidPaginationParamsError = errors.New("Invalid pagination params")
 
 func FormatedPagination(pagination string) (*Pagination, error) {
@@ -28,4 +31,13 @@ func FormatedPagination(pagination string) (*Pagination, error) {
 		return &Pagination{}, InvalidPaginationParamsError
 	}
 	return &Pagination{Start: res[0], End: res[1]}, nil
+}
+
+func IsUniqueViolationError(err error) bool {
+	var pgErr *pgconn.PgError
+
+	if errors.As(err, &pgErr) && pgErr.Code == UniqueViolationErrorCode {
+		return true
+	}
+	return false
 }

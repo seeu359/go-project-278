@@ -17,5 +17,8 @@ func New(q *links.Queries) *gin.Engine {
 	r.GET("/api/links/:id", h.GetLinkById)
 	r.PUT("/api/links/:id", h.UpdateLink)
 	r.DELETE("/api/links/:id", h.DeleteLink)
+
+	r.GET("/r/:code", h.RedirectTo)
+	r.GET("/api/link_visits", h.GetVisits)
 	return r
 }
